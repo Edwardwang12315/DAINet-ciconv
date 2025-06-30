@@ -32,14 +32,14 @@ parser = argparse.ArgumentParser(
     description='DSFD face Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
 parser.add_argument('--batch_size',
-                    default=8, type=int, # server上为8 我的电脑上2,仅训练ref时为16
+                    default=1, type=int, # server上为8 我的电脑上2,仅训练ref时为16
                     help='Batch size for training')
 parser.add_argument('--model',
                     default='dark', type=str,
                     choices=['dark', 'vgg', 'resnet50', 'resnet101', 'resnet152'],
                     help='model for training')
 parser.add_argument('--resume',
-                    default=None, type=str, # '../model/forDAINet/dark/dsfd.pth'
+                    default='../../model/forDAINet/dark/dsfd_best.pth', type=str, # '../../model/forDAINet/dark/dsfd.pth'
                     help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--num_workers',
                     default=20, type=int,
@@ -63,7 +63,7 @@ parser.add_argument('--multigpu',
                     default=True, type=bool,
                     help='Use mutil Gpu training')
 parser.add_argument('--save_folder',
-                    default='../model/forDAINet/',
+                    default='../../model/forDAINet/',
                     help='Directory for saving checkpoint models')
 parser.add_argument('--local_rank',
                     type=int,
@@ -163,8 +163,8 @@ def train():
         net.ciconv2d_l.apply(net.weights_init)
         net.ciconv2d_d.apply(net.weights_init)
 
-    if True:
-        LoadLocalW(net,'../model/forDAINet/dark/dsfd.pth')
+    # if True:
+    #     LoadLocalW(net,'../../model/forDAINet/dark/dsfd_v1.4.pth')
 
     # Scaling the lr
     # 设置了根据批次大小和gpu数量调整学习率的机制
@@ -234,15 +234,24 @@ def train():
             # Generation of degraded data and AET groundtruth
             for i in range(images.shape[0]):
                 img_dark[i], _ = Low_Illumination_Degrading(images[i])#ISP方法生成低照度图像
+            
+            print( '原图' )
+            image = np.transpose( images[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
+            image = (image * 255).astype( np.uint8 )
+            plt.imshow( image )
+            plt.axis( 'off' )
+            # exit()
+            # 保存图像到文件
+            plt.savefig( f'原图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 
-            # print( '暗化' )
-            # image = np.transpose( img_dark[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
-            # image = (image * 255).astype( np.uint8 )
-            # plt.imshow( image )
-            # plt.axis( 'off' )
-            # # exit()
-            # # 保存图像到文件
-            # plt.savefig( f'ISP_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+            print( '暗化' )
+            image = np.transpose( img_dark[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
+            image = (image * 255).astype( np.uint8 )
+            plt.imshow( image )
+            plt.axis( 'off' )
+            # exit()
+            # 保存图像到文件
+            plt.savefig( f'ISP_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 
             if iteration in cfg.LR_STEPS:
                 step_index += 1
