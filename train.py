@@ -32,17 +32,17 @@ parser = argparse.ArgumentParser(
     description='DSFD face Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
 parser.add_argument('--batch_size',
-                    default=1, type=int, # server上为8 我的电脑上2,仅训练ref时为16
+                    default=8, type=int, # server上为8 我的电脑上2,仅训练ref时为16
                     help='Batch size for training')
 parser.add_argument('--model',
                     default='dark', type=str,
                     choices=['dark', 'vgg', 'resnet50', 'resnet101', 'resnet152'],
                     help='model for training')
 parser.add_argument('--resume',
-                    default='../../model/forDAINet/dark/dsfd_best.pth', type=str, # '../../model/forDAINet/dark/dsfd.pth'
+                    default=None, type=str, # '../../model/forDAINet/dark/dsfd_best.pth'
                     help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--num_workers',
-                    default=20, type=int,
+                    default=72, type=int, # sever上为72
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda',
                     default=True, type=bool,
@@ -235,23 +235,23 @@ def train():
             for i in range(images.shape[0]):
                 img_dark[i], _ = Low_Illumination_Degrading(images[i])#ISP方法生成低照度图像
             
-            print( '原图' )
-            image = np.transpose( images[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
-            image = (image * 255).astype( np.uint8 )
-            plt.imshow( image )
-            plt.axis( 'off' )
-            # exit()
-            # 保存图像到文件
-            plt.savefig( f'原图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+            # print( '原图' )
+            # image = np.transpose( images[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
+            # image = (image * 255).astype( np.uint8 )
+            # plt.imshow( image )
+            # plt.axis( 'off' )
+            # # exit()
+            # # 保存图像到文件
+            # plt.savefig( f'原图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 
-            print( '暗化' )
-            image = np.transpose( img_dark[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
-            image = (image * 255).astype( np.uint8 )
-            plt.imshow( image )
-            plt.axis( 'off' )
-            # exit()
-            # 保存图像到文件
-            plt.savefig( f'ISP_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+            # print( '暗化' )
+            # image = np.transpose( img_dark[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
+            # image = (image * 255).astype( np.uint8 )
+            # plt.imshow( image )
+            # plt.axis( 'off' )
+            # # exit()
+            # # 保存图像到文件
+            # plt.savefig( f'ISP_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 
             if iteration in cfg.LR_STEPS:
                 step_index += 1
@@ -278,27 +278,27 @@ def train():
             # exit()
 
             """ 认为ciconv得到的是伪真值,只学习边缘纹理信息 """
-            loss_decoder,loss_ciconv,loss_dark,loss_light = criterion_enhance(out2)
+            loss_decoder,loss_ciconv,loss_dark,loss_light,loss_consist = criterion_enhance(out2)
 
             # print(f'loss_decoder = {loss_decoder},loss_ciconv = {loss_ciconv},loss_dark = {loss_dark},loss_light = {loss_light}')
-            losses_ref = (loss_decoder + loss_ciconv + loss_dark + loss_light)/4
+            losses_ref = (loss_decoder + loss_ciconv + loss_dark + loss_light + loss_consist)/5
 
-            """ 以下损失希望两幅图色彩与边缘都一致 """
-            # detach的目的是保证亮图的输出不会被干扰
-            losses_cons = (F.mse_loss(R_dark, R_light.detach()) * cfg.WEIGHT.EQUAL_R) # 只保留了特征提取部分的一致性损失
+            # """ 以下损失希望两幅图色彩与边缘都一致 """
+            # # detach的目的是保证亮图的输出不会被干扰
+            # losses_cons = (F.mse_loss(R_dark, R_light.detach()) * cfg.WEIGHT.EQUAL_R) # 只保留了特征提取部分的一致性损失
             
-            # # 分别将解码图和分解图对比，促进解码器学习
-            # losses_ref = F.l1_loss(R_dark, R_dark_2.detach()) + F.l1_loss(R_light, R_light_2.detach()) + (
-            #             1. - ssim(R_dark, R_dark_2.detach())) + (1. - ssim(R_light, R_light_2.detach()))
+            # # # 分别将解码图和分解图对比，促进解码器学习
+            # # losses_ref = F.l1_loss(R_dark, R_dark_2.detach()) + F.l1_loss(R_light, R_light_2.detach()) + (
+            # #             1. - ssim(R_dark, R_dark_2.detach())) + (1. - ssim(R_light, R_light_2.detach()))
 
-            # 同时ciconv也应该学习如何对亮度不同的图像进行提取边缘
-            # losses_cic = F.l1_loss(R_dark_2, R_light_2) + (1. - ssim(R_dark_2, R_light_2))
-            losses_cic = (F.l1_loss(R_dark_2, R_light_2.detach()) + (1. - ssim(R_dark_2, R_light_2.detach())) \
-                        #   + F.l1_loss(R_dark_2.detach(), R_light_2) + (1. - ssim(R_dark_2.detach(), R_light_2))
-                          ) * cfg.WEIGHT.DCOM
+            # # 同时ciconv也应该学习如何对亮度不同的图像进行提取边缘
+            # # losses_cic = F.l1_loss(R_dark_2, R_light_2) + (1. - ssim(R_dark_2, R_light_2))
+            # losses_cic = (F.l1_loss(R_dark_2, R_light_2.detach()) + (1. - ssim(R_dark_2, R_light_2.detach())) \
+            #             #   + F.l1_loss(R_dark_2.detach(), R_light_2) + (1. - ssim(R_dark_2.detach(), R_light_2))
+            #               ) * cfg.WEIGHT.DCOM
 
             if True :
-                loss = loss_l_pa1l + loss_c_pal1 + loss_l_pa12 + loss_c_pal2 + losses_ref + losses_cons + losses_feat + losses_cic
+                loss = loss_l_pa1l + loss_c_pal1 + loss_l_pa12 + loss_c_pal2 + losses_ref + loss_consist + losses_feat
             else:
                 loss = losses_ref + losses_cons + losses_feat + losses_cic
             
@@ -315,8 +315,7 @@ def train():
                 loss_c2 += loss_c_pal2.item()
             loss_ft += losses_feat.item()
             loss_rf += losses_ref.item()
-            loss_co += losses_cons.item()
-            loss_cic += losses_cic.item()
+            loss_co += loss_consist.item()
             
             if iteration % 100 == 0:
                 tloss = losses / (batch_idx + 1)
@@ -328,7 +327,6 @@ def train():
                 tloss_ft = loss_ft / (batch_idx + 1)
                 tloss_rf = loss_rf / (batch_idx + 1)
                 tloss_co = loss_co / (batch_idx + 1)
-                tloss_cic = loss_cic / (batch_idx + 1)
                 
                 if local_rank == 0:
                     print( 'Timer: %.4f' % (t1 - t0) )
@@ -336,7 +334,7 @@ def train():
                     if True :
                         print( '->> pal1 conf loss:{:.4f} || pal1 loc loss:{:.4f}'.format( tloss_c1 , tloss_l1 ) )
                         print( '->> pal2 conf loss:{:.4f} || pal2 loc loss:{:.4f}'.format( tloss_c2 , tloss_l2 ) )
-                    print( '->> feature loss:{:.4f} || contrast loss:{:.4f} || lowlevel loss:{:.4f} || cic_decom loss:{:.4f}'.format( tloss_ft , tloss_rf, tloss_co,tloss_cic) )
+                    print( '->> feature loss:{:.4f} || contrast loss:{:.4f} || lowlevel loss:{:.4f} '.format( tloss_ft , tloss_rf, tloss_co) )
                     print( '->>lr:{}'.format( optimizer.param_groups[ 0 ][ 'lr' ] ) )
                     # val(epoch, net, dsfd_net, criterion)
         
