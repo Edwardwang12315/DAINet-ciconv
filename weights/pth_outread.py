@@ -28,4 +28,4 @@ def save_pth_dict_to_txt( pth_path , txt_path ) :
 		for key , value in data.items() :
 			_write_item( key , value , indent = 0 )
 
-save_pth_dict_to_txt( '../../model/forDAINet/dark/dsfd.pth' , 'dsfd_ciconv.txt' )
+save_pth_dict_to_txt( '../../model/forDAINet/dark/dsfd.pth' , 'dsfd.txt' )

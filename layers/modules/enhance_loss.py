@@ -143,9 +143,14 @@ class EnhanceLoss(nn.Module):
                       + (1. - ssim(R_light, R_light_2.detach()))
                       ) # light输出
 
-        loss_consist = 0.3 * (1 * self.gram_loss(R_light_2, R_dark.detach()) 
-                      + self.grad_loss(R_light_2, R_dark.detach()) 
-                      + (1. - ssim(R_light_2, R_dark.detach()))
-                      ) # light输出
+        if False:
+            loss_consist = 0.3 * (1 * self.gram_loss(R_light_2, R_dark.detach()) 
+                        + self.grad_loss(R_light_2, R_dark.detach()) 
+                        + (1. - ssim(R_light_2, R_dark.detach()))
+                        ) # 为检测任务服务的增强损失
+            
         # print(f'loss_decoder={loss_decoder},loss_ciconv={loss_ciconv},loss_dark={loss_dark},loss_light={loss_light}')
-        return loss_decoder,loss_ciconv,loss_dark,loss_light,loss_consist
+        if False:
+            return loss_decoder,loss_ciconv,loss_dark,loss_light,loss_consist
+        else:
+            return loss_decoder,loss_ciconv,loss_dark,loss_light
