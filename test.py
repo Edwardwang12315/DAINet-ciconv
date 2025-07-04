@@ -220,7 +220,7 @@ def load_models():
     print('build network')
     net = build_net('test', num_classes=2, model='dark')
     net.eval()
-    net.load_state_dict(torch.load('../model/forDAINet/dark/dsfd.pth')) # Set the dir of your model weight
+    net.load_state_dict(torch.load('../../model/forDAINet/dark/dsfd.pth')) # Set the dir of your model weight
 
     if use_cuda:
         net = net.cuda()
@@ -386,7 +386,7 @@ if __name__ == '__main__':
     save_path = './result'
 
     def load_images():
-      imglist = glob.glob('../dataset/DarkFace/image/*.png') # Set the dir of your test data
+      imglist = glob.glob('../../dataset/DarkFace/image/*.png') # Set the dir of your test data
       return imglist
 
     ''' Main Test '''

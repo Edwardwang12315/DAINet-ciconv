@@ -93,7 +93,7 @@ class DSFD(nn.Module):
 		self.phase = phase
 		self.num_classes = num_classes
 		self.vgg = nn.ModuleList(base)
-		if False :
+		if True :
 			self.L2Normof1 = L2Norm(256, 10)
 			self.L2Normof2 = L2Norm(512, 8)
 			self.L2Normof3 = L2Norm(512, 5)
@@ -193,7 +193,7 @@ class DSFD(nn.Module):
 		# plt.savefig( f'test_ciconv.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 		# exit()
 		
-		if False  :
+		if True  :
 			# the following is the rest of the original detection pipeline
 			of1 = _x
 			s = self.L2Normof1( of1 )
@@ -328,7 +328,7 @@ class DSFD(nn.Module):
 		for k in range(5):
 			_x_light = self.vgg[k](_x_light)
 
-		for k in range(16) if False  else range(5) : # 检测时为 16 解码时为 5
+		for k in range(16) if True  else range(5) : # 检测时为 16 解码时为 5
 			_x = self.vgg[k](_x)
 			# x检测通路的输入
 			if k == 4:
@@ -345,31 +345,31 @@ class DSFD(nn.Module):
 		# 经过网络提取特征后的KL散度损失
 		loss_mutual = cfg.WEIGHT.MC * (self.KL( _x_light , _x_dark ) + self.KL( _x_dark , _x_light ))
 
-		# # ''' 显示部分（调试用） '''
-		# print( 'train_暗图' )
-		# # 以下为单通道边缘图显示方法
-		# image = R_dark[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
-		# # 归一化到对称范围
-		# vmax = np.max( np.abs( image ) )
-		# image_normalized = image / vmax  # 范围[-1, 1]
-		# # 使用红蓝颜色映射可视化
-		# plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
-		# plt.axis( 'off' )
-		# # 保存图像到文件
-		# plt.savefig( f'train_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+		# ''' 显示部分（调试用） '''
+		print( 'train_暗图' )
+		# 以下为单通道边缘图显示方法
+		image = R_dark[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
+		# 归一化到对称范围
+		vmax = np.max( np.abs( image ) )
+		image_normalized = image / vmax  # 范围[-1, 1]
+		# 使用红蓝颜色映射可视化
+		plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
+		plt.axis( 'off' )
+		# 保存图像到文件
+		plt.savefig( f'train_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 		
 		
-		# print( 'train_亮图' )
-		# # 以下为单通道边缘图显示方法
-		# image = R_light[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
-		# # 归一化到对称范围
-		# vmax = np.max( np.abs( image ) )
-		# image_normalized = image / vmax  # 范围[-1, 1]
-		# # 使用红蓝颜色映射可视化
-		# plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
-		# plt.axis( 'off' )
-		# # 保存图像到文件
-		# plt.savefig( f'train_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+		print( 'train_亮图' )
+		# 以下为单通道边缘图显示方法
+		image = R_light[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
+		# 归一化到对称范围
+		vmax = np.max( np.abs( image ) )
+		image_normalized = image / vmax  # 范围[-1, 1]
+		# 使用红蓝颜色映射可视化
+		plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
+		plt.axis( 'off' )
+		# 保存图像到文件
+		plt.savefig( f'train_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 		
 		# # 新增
 		# # 保存图像数据
@@ -414,7 +414,7 @@ class DSFD(nn.Module):
 		# # 保存图像到文件
 		# plt.savefig( f'train_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 		
-		if False :
+		if True :
 			# the following is the rest of the original detection pipeline
 			of1 = _x
 			s = self.L2Normof1(of1)
@@ -609,7 +609,7 @@ class DSFD(nn.Module):
 		# plt.savefig( f'ciconv_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 		# exit()
 		
-		if False :
+		if True :
 			return output,[ R_dark , R_light , R_dark_c , R_light_c ] , loss_mutual
 		else:
 			return x,[ R_dark , R_light , R_dark_c , R_light_c ] , loss_mutual
@@ -649,7 +649,7 @@ class DSFD(nn.Module):
 vgg_cfg_full = [64, 64, 'M',
 				128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M', 512, 512, 512, 'M'
 			]
-vgg_cfg = vgg_cfg_full if False  else vgg_cfg_full[:3]
+vgg_cfg = vgg_cfg_full if True  else vgg_cfg_full[:3]
 
 extras_cfg = [256, 'S', 512, 128, 'S', 256]
 
@@ -690,7 +690,7 @@ def vgg(cfg, i, batch_norm=False):
 			else:
 				layers += [conv2d, nn.ReLU(inplace=True)]
 			in_channels = v
-	if False :
+	if True :
 		conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=3, dilation=3)
 		conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
 		layers += [conv6,
@@ -736,7 +736,7 @@ def multibox(vgg, extra_layers, num_classes):
 def build_net_dark(phase, num_classes=2):
 	base = vgg(vgg_cfg, 3)
 	
-	if False :
+	if True :
 		extras = add_extras(extras_cfg, 1024)
 		head1 = multibox(base, extras, num_classes)
 		head2 = multibox(base, extras, num_classes)
