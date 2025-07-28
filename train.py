@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser(
     description='DSFD face Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
 parser.add_argument('--batch_size',
-                    default=8, type=int, # server上为8 我的电脑上2,仅训练ref时为16
+                    default=1, type=int, # server上为8 我的电脑上2,仅训练ref时为16
                     help='Batch size for training')
 parser.add_argument('--model',
                     default='dark', type=str,
@@ -214,6 +214,10 @@ def train():
         loss_c1 = 0
         loss_l2 = 0
         loss_c2 = 0
+        loss_l1_c = 0
+        loss_c1_c = 0
+        loss_l2_c = 0
+        loss_c2_c = 0
         loss_ft = 0
         loss_rf = 0
         loss_co = 0
@@ -260,7 +264,7 @@ def train():
             # 前向传播两个分支
             t0 = time.time()
 
-            out, out2, losses_feat = net(img_dark, images)
+            out, out2, losses_feat,out_c = net(img_dark, images)
             R_dark, R_light, R_dark_2, R_light_2 = out2
             # print( "After net:" )
             # print( f"Allocated: {torch.cuda.memory_allocated() / 1024 ** 2:.2f} MB" )
@@ -272,6 +276,8 @@ def train():
             if True :
                 loss_l_pa1l, loss_c_pal1 = criterion(out[:3], targetss)
                 loss_l_pa12, loss_c_pal2 = criterion(out[3:], targetss)
+                loss_l_pa1l_c, loss_c_pal1_c = criterion(out_c[:3], targetss)
+                loss_l_pa12_c, loss_c_pal2_c = criterion(out_c[3:], targetss)
 
             # 一致性损失
             # print(f'三通道一致性损失为{F.mse_loss(R_dark, R_light.detach())}，单通道一致性损失为{F.mse_loss(R_dark_2, R_light_2.detach())}')
@@ -279,13 +285,15 @@ def train():
 
             """ 认为ciconv得到的是伪真值,只学习边缘纹理信息 """
             if True:
-                loss_decoder,loss_ciconv,loss_dark,loss_light,loss_consist = criterion_enhance(out2)
+                # loss_decoder,loss_ciconv,loss_dark,loss_light,loss_consist = criterion_enhance(out2)
+                loss_decoder,loss_ciconv,loss_dark,loss_light = criterion_enhance(out2)
             else:
                 loss_decoder,loss_ciconv,loss_dark,loss_light = criterion_enhance(out2)
                 
             # print(f'loss_decoder = {loss_decoder},loss_ciconv = {loss_ciconv},loss_dark = {loss_dark},loss_light = {loss_light}')
             if True:
-                losses_ref = (loss_decoder + loss_ciconv + loss_dark + loss_light + loss_consist)/5
+                # losses_ref = (loss_decoder + loss_ciconv + loss_dark + loss_light + loss_consist)/5
+                losses_ref = (loss_decoder + loss_ciconv + loss_dark + loss_light )/5
             else:
                 losses_ref = (loss_decoder + loss_ciconv + loss_dark + loss_light )/4
 
@@ -304,7 +312,8 @@ def train():
             #               ) * cfg.WEIGHT.DCOM
 
             if True :
-                loss = loss_l_pa1l + loss_c_pal1 + loss_l_pa12 + loss_c_pal2 + losses_ref + loss_consist + losses_feat
+                # loss = loss_l_pa1l + loss_c_pal1 + loss_l_pa12 + loss_c_pal2 + losses_ref + loss_consist + losses_feat + loss_l_pa1l_c + loss_c_pal1_c + loss_l_pa12_c + loss_c_pal2_c 
+                loss = loss_l_pa1l + loss_c_pal1 + loss_l_pa12 + loss_c_pal2 + losses_ref + losses_feat + loss_l_pa1l_c + loss_c_pal1_c + loss_l_pa12_c + loss_c_pal2_c 
             else:
                 loss = losses_ref + losses_feat
             
@@ -321,7 +330,11 @@ def train():
                 loss_c1 += loss_c_pal1.item()
                 loss_l2 += loss_l_pa12.item()
                 loss_c2 += loss_c_pal2.item()
-                loss_co += loss_consist.item()
+                loss_l1_c += loss_l_pa1l_c.item()
+                loss_c1_c += loss_c_pal1_c.item()
+                loss_l2_c += loss_l_pa12_c.item()
+                loss_c2_c += loss_c_pal2_c.item()
+                # loss_co += loss_consist.item()
             loss_ft += losses_feat.item()
             loss_rf += losses_ref.item()
             
@@ -332,7 +345,11 @@ def train():
                     tloss_c1 = loss_c1 / (batch_idx + 1)
                     tloss_l2 = loss_l2 / (batch_idx + 1)
                     tloss_c2 = loss_c2 / (batch_idx + 1)
-                    tloss_co = loss_co / (batch_idx + 1)
+                    tloss_l1_c = loss_l1_c / (batch_idx + 1)
+                    tloss_c1_c = loss_c1_c / (batch_idx + 1)
+                    tloss_l2_c = loss_l2_c / (batch_idx + 1)
+                    tloss_c2_c = loss_c2_c / (batch_idx + 1)
+                    # tloss_co = loss_co / (batch_idx + 1)
                 tloss_ft = loss_ft / (batch_idx + 1)
                 tloss_rf = loss_rf / (batch_idx + 1)
                 
@@ -342,7 +359,9 @@ def train():
                     if True :
                         print( '->> pal1 conf loss:{:.4f} || pal1 loc loss:{:.4f}'.format( tloss_c1 , tloss_l1 ) )
                         print( '->> pal2 conf loss:{:.4f} || pal2 loc loss:{:.4f}'.format( tloss_c2 , tloss_l2 ) )
-                        print( '->> lowlevel loss:{:.4f} '.format( tloss_co) )
+                        print( '->> pal1_c conf loss:{:.4f} || pal1_c loc loss:{:.4f}'.format( tloss_c1_c , tloss_l1_c ) )
+                        print( '->> pal2_c conf loss:{:.4f} || pal2_c loc loss:{:.4f}'.format( tloss_c2_c , tloss_l2_c ) )
+                        # print( '->> lowlevel loss:{:.4f} '.format( tloss_co) )
                     print( '->> feature loss:{:.4f} || contrast loss:{:.4f}'.format( tloss_ft , tloss_rf) )
                     print( '->>lr:{}'.format( optimizer.param_groups[ 0 ][ 'lr' ] ) )
                     # val(epoch, net, dsfd_net, criterion)

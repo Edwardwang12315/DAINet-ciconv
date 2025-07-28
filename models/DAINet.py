@@ -115,7 +115,7 @@ class DSFD(nn.Module):
 			self.conf_pal2 = nn.ModuleList(head2[1])
 
 		# the reflectance decoding branch
-		# 反射图解码模块
+		# 解码模块
 		self.ref = nn.Sequential(
 			nn.Conv2d(64, 64, kernel_size=3, padding=1),
 			nn.ReLU(inplace=True),
@@ -125,6 +125,16 @@ class DSFD(nn.Module):
 			nn.Conv2d(3, 1, kernel_size=1, padding=0),
 			# nn.Sigmoid()
 			# nn.BatchNorm2d(1)
+		)
+		# 编码模块
+		self.cod = nn.Sequential(
+			nn.Conv2d(1, 3, kernel_size=1, padding=0),
+			nn.ReLU(inplace=True),
+			nn.Conv2d(3, 64, kernel_size=3, padding=1),
+			nn.ReLU(inplace=True),
+			nn.Conv2d(64, 64, kernel_size=3, padding=1),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=2, stride=2),
 		)
 		self.ciconv2d_l = CIConv2d(invariant = 'W',k = 3,scale=0.0)
 		self.ciconv2d_d = CIConv2d(invariant = 'W',k = 3,scale=0.0)
@@ -319,6 +329,13 @@ class DSFD(nn.Module):
 		conf_pal1 = list()
 		loc_pal2 = list()
 		conf_pal2 = list()
+		
+		pal1_c_sources = list()
+		pal2_c_sources = list()
+		loc_pal1_c = list()
+		conf_pal1_c = list()
+		loc_pal2_c = list()
+		conf_pal2_c = list()
 
 		# 检测主线和Retinex主线分离
 		# apply vgg up to conv4_3 relu
@@ -345,31 +362,31 @@ class DSFD(nn.Module):
 		# 经过网络提取特征后的KL散度损失
 		loss_mutual = cfg.WEIGHT.MC * (self.KL( _x_light , _x_dark ) + self.KL( _x_dark , _x_light ))
 
-		# ''' 显示部分（调试用） '''
-		print( 'train_暗图' )
-		# 以下为单通道边缘图显示方法
-		image = R_dark[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
-		# 归一化到对称范围
-		vmax = np.max( np.abs( image ) )
-		image_normalized = image / vmax  # 范围[-1, 1]
-		# 使用红蓝颜色映射可视化
-		plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
-		plt.axis( 'off' )
-		# 保存图像到文件
-		plt.savefig( f'train_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+		# # ''' 显示部分（调试用） '''
+		# print( 'train_暗图' )
+		# # 以下为单通道边缘图显示方法
+		# image = R_dark[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
+		# # 归一化到对称范围
+		# vmax = np.max( np.abs( image ) )
+		# image_normalized = image / vmax  # 范围[-1, 1]
+		# # 使用红蓝颜色映射可视化
+		# plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
+		# plt.axis( 'off' )
+		# # 保存图像到文件
+		# plt.savefig( f'train_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 		
 		
-		print( 'train_亮图' )
-		# 以下为单通道边缘图显示方法
-		image = R_light[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
-		# 归一化到对称范围
-		vmax = np.max( np.abs( image ) )
-		image_normalized = image / vmax  # 范围[-1, 1]
-		# 使用红蓝颜色映射可视化
-		plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
-		plt.axis( 'off' )
-		# 保存图像到文件
-		plt.savefig( f'train_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+		# print( 'train_亮图' )
+		# # 以下为单通道边缘图显示方法
+		# image = R_light[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
+		# # 归一化到对称范围
+		# vmax = np.max( np.abs( image ) )
+		# image_normalized = image / vmax  # 范围[-1, 1]
+		# # 使用红蓝颜色映射可视化
+		# plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
+		# plt.axis( 'off' )
+		# # 保存图像到文件
+		# plt.savefig( f'train_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 		
 		# # 新增
 		# # 保存图像数据
@@ -535,6 +552,128 @@ class DSFD(nn.Module):
 		R_dark_c = self.ciconv2d_d(_x)
 		R_light_c = self.ciconv2d_l(_x_light)
 		
+		# 提取特征
+		_x = R_light_c
+		_x = self.cod(_x)
+		with torch.no_grad():
+			for k in range(5,16) : # 检测时为 16 解码时为 5
+				_x = self.vgg[k](_x)
+
+			# the following is the rest of the original detection pipeline
+			of1 = _x
+			s = self.L2Normof1(of1)
+			pal1_c_sources.append(s)
+			# apply vgg up to fc7
+			for k in range(16, 23):
+				_x = self.vgg[k](_x)
+			of2 = _x
+			s = self.L2Normof2(of2)
+			pal1_c_sources.append(s)
+	
+			for k in range(23, 30):
+				_x = self.vgg[k](_x)
+			of3 = _x
+			s = self.L2Normof3(of3)
+			pal1_c_sources.append(s)
+	
+			for k in range(30, len(self.vgg)):
+				_x = self.vgg[k](_x)
+			of4 = _x
+			pal1_c_sources.append(of4)
+			# apply extra layers and cache source layer outputs
+	
+			for k in range(2):
+				_x = F.relu(self.extras[k](_x), inplace=True)
+			of5 = _x
+			pal1_c_sources.append(of5)
+			for k in range(2, 4):
+				_x = F.relu(self.extras[k](_x), inplace=True)
+			of6 = _x
+			pal1_c_sources.append(of6)
+	
+			conv7 = F.relu(self.fpn_topdown[0](of6), inplace=True)
+	
+			_x = F.relu(self.fpn_topdown[1](conv7), inplace=True)
+			conv6 = F.relu(self._upsample_prod(
+				_x, self.fpn_latlayer[0](of5)), inplace=True)
+	
+			_x = F.relu(self.fpn_topdown[2](conv6), inplace=True)
+			convfc7_2 = F.relu(self._upsample_prod(
+				_x, self.fpn_latlayer[1](of4)), inplace=True)
+	
+			_x = F.relu(self.fpn_topdown[3](convfc7_2), inplace=True)
+			conv5 = F.relu(self._upsample_prod(
+				_x, self.fpn_latlayer[2](of3)), inplace=True)
+	
+			_x = F.relu(self.fpn_topdown[4](conv5), inplace=True)
+			conv4 = F.relu(self._upsample_prod(
+				_x, self.fpn_latlayer[3](of2)), inplace=True)
+	
+			_x = F.relu(self.fpn_topdown[5](conv4), inplace=True)
+			conv3 = F.relu(self._upsample_prod(
+				_x, self.fpn_latlayer[4](of1)), inplace=True)
+	
+			ef1 = self.fpn_fem[0](conv3)
+			ef1 = self.L2Normef1(ef1)
+			ef2 = self.fpn_fem[1](conv4)
+			ef2 = self.L2Normef2(ef2)
+			ef3 = self.fpn_fem[2](conv5)
+			ef3 = self.L2Normef3(ef3)
+			ef4 = self.fpn_fem[3](convfc7_2)
+			ef5 = self.fpn_fem[4](conv6)
+			ef6 = self.fpn_fem[5](conv7)
+	
+			pal2_c_sources = (ef1, ef2, ef3, ef4, ef5, ef6)
+			for (_x, l, c) in zip(pal1_c_sources, self.loc_pal1, self.conf_pal1):
+				loc_pal1_c.append(l(_x).permute(0, 2, 3, 1).contiguous())
+				conf_pal1_c.append(c(_x).permute(0, 2, 3, 1).contiguous())
+	
+			for (_x, l, c) in zip(pal2_c_sources, self.loc_pal2, self.conf_pal2):
+				loc_pal2_c.append(l(_x).permute(0, 2, 3, 1).contiguous())
+				conf_pal2_c.append(c(_x).permute(0, 2, 3, 1).contiguous())
+	
+			features_maps = []
+			for i in range(len(loc_pal1_c)):
+				feat = []
+				feat += [loc_pal1_c[i].size(1), loc_pal1_c[i].size(2)]
+				features_maps += [feat]
+	
+			loc_pal1_c = torch.cat([o.view(o.size(0), -1)
+								  for o in loc_pal1_c], 1)
+			conf_pal1_c = torch.cat([o.view(o.size(0), -1)
+								   for o in conf_pal1_c], 1)
+	
+			loc_pal2_c = torch.cat([o.view(o.size(0), -1)
+								  for o in loc_pal2_c], 1)
+			conf_pal2_c = torch.cat([o.view(o.size(0), -1)
+								   for o in conf_pal2_c], 1)
+	
+			priorbox = PriorBox(size, features_maps, cfg, pal=1)
+			with torch.no_grad():
+				self.priors_pal1_c = priorbox.forward()
+	
+			priorbox = PriorBox(size, features_maps, cfg, pal=2)
+			with torch.no_grad():
+				self.priors_pal2_c = priorbox.forward()
+	
+			if self.phase == 'test':
+				output_c = self.detect.forward(
+					loc_pal2_c.view(loc_pal2_c.size(0), -1, 4),
+					self.softmax(conf_pal2_c.view(conf_pal2_c.size(0), -1,
+												self.num_classes)),  # conf preds
+					self.priors_pal2_c.type(type(_x.data))
+				)
+	
+			else:
+				output_c = (
+					loc_pal1_c.view(loc_pal1_c.size(0), -1, 4),
+					conf_pal1_c.view(conf_pal1_c.size(0), -1, self.num_classes),
+					self.priors_pal1_c,
+					loc_pal2_c.view(loc_pal2_c.size(0), -1, 4),
+					conf_pal2_c.view(conf_pal2_c.size(0), -1, self.num_classes),
+					self.priors_pal2_c)
+
+
 		# # ''' 显示部分（调试用） '''
 		# print( 'ciconv_暗图' )
 		# # 以下为单通道边缘图显示方法
@@ -610,7 +749,7 @@ class DSFD(nn.Module):
 		# exit()
 		
 		if True :
-			return output,[ R_dark , R_light , R_dark_c , R_light_c ] , loss_mutual
+			return output,[ R_dark , R_light , R_dark_c , R_light_c ] , loss_mutual, output_c
 		else:
 			return x,[ R_dark , R_light , R_dark_c , R_light_c ] , loss_mutual
 
