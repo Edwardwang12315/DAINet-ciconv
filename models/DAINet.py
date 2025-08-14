@@ -174,10 +174,10 @@ class DSFD(nn.Module):
 		for k in range( 16 ) :  # 检测时为 16 解码时为 5
 			_x = self.vgg[ k ]( _x )
 			# x检测通路的输入
-			if k == 4 :
-				_x_dark = _x
+		# 	if k == 4 :
+		# 		_x_dark = _x
 
-		R = self.ref( _x_dark[ 0 :1 ] )
+		# R = self.ref( _x_dark[ 0 :1 ] )
 		
 		# print( '暗图' )
 		# image = np.transpose( R[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
@@ -318,7 +318,7 @@ class DSFD(nn.Module):
 						conf_pal2.view( conf_pal2.size( 0 ) , -1 , self.num_classes ) ,
 						self.priors_pal2)
 		
-		return output , R
+		return output
 	
 	# during training, the model takes the paired images, and their pseudo GT illumination maps from the Retinex Decom Net
 	def forward(self, x, x_light):
