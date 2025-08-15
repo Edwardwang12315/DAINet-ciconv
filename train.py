@@ -39,10 +39,10 @@ parser.add_argument('--model',
 					choices=['dark', 'vgg', 'resnet50', 'resnet101', 'resnet152'],
 					help='model for training')
 parser.add_argument('--resume',
-					default=None, type=str, # '../../model/forDAINet/dark/dsfd_best.pth'
+					default='../../model/forDAINet/dark/dsfd_v3.0.pth', type=str, # '../../model/forDAINet/dark/dsfd_v3.0.pth'
 					help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--num_workers',
-					default=72, type=int, # sever上为72
+					default=12, type=int, # sever上为72
 					help='Number of workers used in dataloading')
 parser.add_argument('--cuda',
 					default=True, type=bool,
@@ -243,23 +243,21 @@ def train():
 			
 			with torch.no_grad():
 				
-				# print( '原图' )
-				# image = np.transpose( images[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
-				# image = (image * 255).astype( np.uint8 )
-				# plt.imshow( image )
-				# plt.axis( 'off' )
-				# # exit()
-				# # 保存图像到文件
-				# plt.savefig( f'原图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+				print( '原图' )
+				image = np.transpose( images[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
+				image = (image * 255).astype( np.uint8 )
+				plt.imshow( image )
+				plt.axis( 'off' )
+				# 保存图像到文件
+				plt.savefig( f'原图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 
-				# print( '暗化' )
-				# image = np.transpose( img_dark[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
-				# image = (image * 255).astype( np.uint8 )
-				# plt.imshow( image )
-				# plt.axis( 'off' )
-				# # exit()
-				# # 保存图像到文件
-				# plt.savefig( f'ISP_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+				print( '暗化' )
+				image = np.transpose( img_dark[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
+				image = (image * 255).astype( np.uint8 )
+				plt.imshow( image )
+				plt.axis( 'off' )
+				# 保存图像到文件
+				plt.savefig( f'ISP_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 
 				pass
 
