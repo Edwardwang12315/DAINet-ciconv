@@ -32,14 +32,14 @@ parser = argparse.ArgumentParser(
 	description='DSFD face Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
 parser.add_argument('--batch_size',
-					default=1, type=int, # server上为8 我的电脑上2,仅训练ref时为12
+					default=8, type=int, # server上为8 我的电脑上2,仅训练ref时为12
 					help='Batch size for training')
 parser.add_argument('--model',
 					default='dark', type=str,
 					choices=['dark', 'vgg', 'resnet50', 'resnet101', 'resnet152'],
 					help='model for training')
 parser.add_argument('--resume',
-					default=None, type=str, # '../../model/forDAINet/dark/dsfd_best.pth'
+					default='../../model/forDAINet/dark/dsfd_60000.pth', type=str, # '../../model/forDAINet/dark/dsfd_best.pth'
 					help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--num_workers',
 					default=72, type=int, # sever上为72
@@ -48,7 +48,7 @@ parser.add_argument('--cuda',
 					default=True, type=bool,
 					help='Use CUDA to train model')
 parser.add_argument('--lr', '--learning-rate',
-					default=5e-4, type=float,
+					default=5e-8, type=float,
 					help='initial learning rate')
 parser.add_argument('--momentum',
 					default=0.9, type=float,
@@ -403,7 +403,7 @@ def val(epoch, net, dsfd_net,  criterion):
 				targets = [ann for ann in targets]
 		img_dark = torch.stack([Low_Illumination_Degrading(images[i])[0] for i in range(images.shape[0])],
 							   dim=0)
-		out, R = net.module.test_forward(img_dark)
+		out = net.module.test_forward(img_dark)
 
 		loss_l_pa1l, loss_c_pal1 = criterion(out[:3], targets)
 		loss_l_pa12, loss_c_pal2 = criterion(out[3:], targets)
