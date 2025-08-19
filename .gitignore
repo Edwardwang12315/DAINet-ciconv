@@ -207,8 +207,11 @@ marimo/_lsp/
 __marimo__/
 
 
-
 result/
+result_dyan_5000/
+result_dyan_60000/
+result_dyan_best/
 result_v2.3/
+
 .vscode/
 */__pycache__/
