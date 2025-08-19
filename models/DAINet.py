@@ -364,30 +364,30 @@ class DSFD(nn.Module):
 		# # ''' 显示部分（调试用） '''
 		with torch.no_grad():
 			
-			# print( 'train_暗图' )
-			# # 以下为单通道边缘图显示方法
-			# image = R_dark[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
-			# # 归一化到对称范围
-			# vmax = np.max( np.abs( image ) )
-			# image_normalized = image / vmax  # 范围[-1, 1]
-			# # 使用红蓝颜色映射可视化
-			# plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
-			# plt.axis( 'off' )
-			# # 保存图像到文件
-			# plt.savefig( f'train_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+			print( 'train_暗图' )
+			# 以下为单通道边缘图显示方法
+			image = R_dark[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
+			# 归一化到对称范围
+			vmax = np.max( np.abs( image ) )
+			image_normalized = image / vmax  # 范围[-1, 1]
+			# 使用红蓝颜色映射可视化
+			plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
+			plt.axis( 'off' )
+			# 保存图像到文件
+			plt.savefig( f'train_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 			
 			
-			# print( 'train_亮图' )
-			# # 以下为单通道边缘图显示方法
-			# image = R_light[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
-			# # 归一化到对称范围
-			# vmax = np.max( np.abs( image ) )
-			# image_normalized = image / vmax  # 范围[-1, 1]
-			# # 使用红蓝颜色映射可视化
-			# plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
-			# plt.axis( 'off' )
-			# # 保存图像到文件
-			# plt.savefig( f'train_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+			print( 'train_亮图' )
+			# 以下为单通道边缘图显示方法
+			image = R_light[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
+			# 归一化到对称范围
+			vmax = np.max( np.abs( image ) )
+			image_normalized = image / vmax  # 范围[-1, 1]
+			# 使用红蓝颜色映射可视化
+			plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
+			plt.axis( 'off' )
+			# 保存图像到文件
+			plt.savefig( f'train_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 			
 			pass
 		
@@ -647,33 +647,33 @@ class DSFD(nn.Module):
 		# # ''' 显示部分（调试用） '''
 		with torch.no_grad():
 			
-			# print( 'ciconv_暗图' )
-			# # 以下为单通道边缘图显示方法
-			# image = R_dark_c[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
+			print( 'ciconv_暗图' )
+			# 以下为单通道边缘图显示方法
+			image = R_dark_c[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
 			
-			# # 归一化到对称范围
-			# vmax = np.max( np.abs( image ) )
-			# image_normalized = image / vmax  # 范围[-1, 1]
+			# 归一化到对称范围
+			vmax = np.max( np.abs( image ) )
+			image_normalized = image / vmax  # 范围[-1, 1]
 
-			# # 使用红蓝颜色映射可视化
-			# plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
-			# plt.axis( 'off' )
-			# # 保存图像到文件
-			# plt.savefig( f'ciconv_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+			# 使用红蓝颜色映射可视化
+			plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
+			plt.axis( 'off' )
+			# 保存图像到文件
+			plt.savefig( f'ciconv_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 			
 			
-			# print( 'ciconv_亮图' )
-			# # 以下为单通道边缘图显示方法
-			# image = R_light_c[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
-			# # 归一化到对称范围
-			# vmax = np.max( np.abs( image ) )
-			# image_normalized = image / vmax  # 范围[-1, 1]
-			# # 使用红蓝颜色映射可视化
-			# plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
-			# plt.axis( 'off' )
-			# # 保存图像到文件
-			# plt.savefig( f'ciconv_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
-			# exit()
+			print( 'ciconv_亮图' )
+			# 以下为单通道边缘图显示方法
+			image = R_light_c[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
+			# 归一化到对称范围
+			vmax = np.max( np.abs( image ) )
+			image_normalized = image / vmax  # 范围[-1, 1]
+			# 使用红蓝颜色映射可视化
+			plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
+			plt.axis( 'off' )
+			# 保存图像到文件
+			plt.savefig( f'ciconv_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+			exit()
 			
 			pass
 			
