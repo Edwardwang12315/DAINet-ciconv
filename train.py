@@ -39,11 +39,7 @@ parser.add_argument('--model',
 					choices=['dark', 'vgg', 'resnet50', 'resnet101', 'resnet152'],
 					help='model for training')
 parser.add_argument('--resume',
-<<<<<<< HEAD
 					default='../../model/forDAINet/dark/dsfd_60000.pth', type=str, # '../../model/forDAINet/dark/dsfd_best.pth'
-=======
-					default='../../model/forDAINet/dark/dsfd_v3.0.pth', type=str, # '../../model/forDAINet/dark/dsfd_v3.0.pth'
->>>>>>> 15f15f7c6cee6a14b4336a07185b599f32e557d1
 					help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--num_workers',
 					default=12, type=int, # sever上为72
