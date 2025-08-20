@@ -218,7 +218,7 @@ def load_models():
     print('build network')
     net = build_net('test', num_classes=2, model='dark')
     net.eval()
-    net.load_state_dict(torch.load('../../model/forDAINet/dyan/dsfd_55000.pth')) # Set the dir of your model weight
+    net.load_state_dict(torch.load('../../model/forDAINet/dyan/dsfd.pth')) # Set the dir of your model weight
 
     if use_cuda:
         net = net.cuda()
