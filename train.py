@@ -39,7 +39,7 @@ parser.add_argument('--model',
 					choices=['dark', 'vgg', 'resnet50', 'resnet101', 'resnet152'],
 					help='model for training')
 parser.add_argument('--resume',
-					default='../../model/forDAINet/dark/dsfd_60000.pth', type=str, # '../../model/forDAINet/dark/dsfd_best.pth'
+					default=None, type=str, # '../../model/forDAINet/dark/dsfd_best.pth'
 					help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--num_workers',
 					default=12, type=int, # sever上为72
@@ -48,7 +48,7 @@ parser.add_argument('--cuda',
 					default=True, type=bool,
 					help='Use CUDA to train model')
 parser.add_argument('--lr', '--learning-rate',
-					default=5e-8, type=float,
+					default=5e-4, type=float,
 					help='initial learning rate')
 parser.add_argument('--momentum',
 					default=0.9, type=float,
@@ -129,8 +129,8 @@ def train():
 	basenet = basenet_factory(args.model)
 	dsfd_net = build_net('train', cfg.NUM_CLASSES, args.model)
 	net = dsfd_net
-	# net_enh = RetinexNet()
-	# net_enh.load_state_dict(torch.load(args.save_folder + 'decomp.pth'))
+	net_enh = RetinexNet()
+	net_enh.load_state_dict(torch.load(args.save_folder + 'decomp.pth'))
 
 	# 中断恢复
 	if args.resume:
@@ -159,10 +159,10 @@ def train():
 			net.conf_pal1.apply(net.weights_init)
 			net.loc_pal2.apply(net.weights_init)
 			net.conf_pal2.apply(net.weights_init)
-		net.ref.apply(net.weights_init)
-		net.cod.apply(net.weights_init)
-		net.ciconv2d_l.apply(net.weights_init)
-		net.ciconv2d_d.apply(net.weights_init)
+		# net.ref.apply(net.weights_init)
+		# net.cod.apply(net.weights_init)
+		# net.ciconv2d_l.apply(net.weights_init)
+		# net.ciconv2d_d.apply(net.weights_init)
 
 	# if True:
 	# 	LoadLocalW(net,'../../model/forDAINet/dark/dsfd_coder.pth')
@@ -181,10 +181,10 @@ def train():
 		param_group += [{'params': dsfd_net.conf_pal1.parameters(), 'lr': lr}]
 		param_group += [{'params': dsfd_net.loc_pal2.parameters(), 'lr': lr}]
 		param_group += [{'params': dsfd_net.conf_pal2.parameters(), 'lr': lr}]
-	param_group += [{'params': dsfd_net.ref.parameters(), 'lr': lr / 10.}]
-	param_group += [{'params': dsfd_net.cod.parameters(), 'lr': lr / 10.}]
-	param_group += [{'params': dsfd_net.ciconv2d_l.parameters(), 'lr': lr / 10.}]
-	param_group += [{'params': dsfd_net.ciconv2d_d.parameters(), 'lr': lr / 10.}]
+	# param_group += [{'params': dsfd_net.ref.parameters(), 'lr': lr / 10.}]
+	# param_group += [{'params': dsfd_net.cod.parameters(), 'lr': lr / 10.}]
+	# param_group += [{'params': dsfd_net.ciconv2d_l.parameters(), 'lr': lr / 10.}]
+	# param_group += [{'params': dsfd_net.ciconv2d_d.parameters(), 'lr': lr / 10.}]
 
 	optimizer = optim.SGD(param_group, lr=lr, momentum=args.momentum,
 						  weight_decay=args.weight_decay)
@@ -193,7 +193,7 @@ def train():
 		if args.multigpu:
 			# 采用数据并行模型，多gpu
 			net = torch.nn.parallel.DistributedDataParallel(net.cuda(), find_unused_parameters=True)
-			# net_enh = torch.nn.parallel.DistributedDataParallel(net_enh.cuda())
+			net_enh = torch.nn.parallel.DistributedDataParallel(net_enh.cuda())
 		# net = net.cuda()
 		cudnn.benckmark = True
 
@@ -208,6 +208,7 @@ def train():
 		if iteration > step:
 			step_index += 1
 			adjust_learning_rate(optimizer, args.gamma, step_index)
+	net_enh.eval()
 	net.train()
 	corr_mat = None
 	for epoch in range(start_epoch, cfg.EPOCHES):
@@ -243,21 +244,21 @@ def train():
 			
 			with torch.no_grad():
 				
-				print( '原图' )
-				image = np.transpose( images[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
-				image = (image * 255).astype( np.uint8 )
-				plt.imshow( image )
-				plt.axis( 'off' )
-				# 保存图像到文件
-				plt.savefig( f'原图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+				# print( '原图' )
+				# image = np.transpose( images[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
+				# image = (image * 255).astype( np.uint8 )
+				# plt.imshow( image )
+				# plt.axis( 'off' )
+				# # 保存图像到文件
+				# plt.savefig( f'原图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 
-				print( '暗化' )
-				image = np.transpose( img_dark[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
-				image = (image * 255).astype( np.uint8 )
-				plt.imshow( image )
-				plt.axis( 'off' )
-				# 保存图像到文件
-				plt.savefig( f'ISP_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+				# print( '暗化' )
+				# image = np.transpose( img_dark[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
+				# image = (image * 255).astype( np.uint8 )
+				# plt.imshow( image )
+				# plt.axis( 'off' )
+				# # 保存图像到文件
+				# plt.savefig( f'ISP_暗图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 
 				pass
 
