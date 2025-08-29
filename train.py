@@ -282,12 +282,6 @@ def train():
         if (epoch + 1) >= 0:
             if True :
                 val(epoch, net, dsfd_net, criterion)
-            global min_loss
-            if tloss < min_loss :
-                if local_rank == 0 :
-                    print( 'Saving best state,epoch' , epoch )
-                    torch.save( dsfd_net.state_dict() , os.path.join(save_folder , 'dsfd_finetune.pth' ) )
-                min_loss = tloss
             
         if iteration >= cfg.MAX_STEPS:
             break
