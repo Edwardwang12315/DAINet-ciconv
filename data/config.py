@@ -36,9 +36,9 @@ _C.anchor_sampling = True
 _C.filter_min_face = True
 
 # train config
-_C.LR_STEPS = (10000*2,12500*2,15000*2)
+_C.LR_STEPS = (2500*5,)
 _C.MAX_STEPS = 150000
-_C.EPOCHES = 80
+_C.EPOCHES = 60
 
 # anchor config
 _C.FEATURE_MAPS = [160, 80, 40, 20, 10, 5]
@@ -69,10 +69,10 @@ _C.WEIGHT.DCOM = 0.1
 
 # face config
 _C.FACE = EasyDict()
-# _C.FACE.TRAIN_FILE = '../../dataset/DarkFace_finetune/train_annotations.txt'
-_C.FACE.TRAIN_FILE = '../../dataset/WiderFace/wider_face_train.txt'
-# _C.FACE.VAL_FILE = '../../dataset/DarkFace_finetune/test_annotations.txt'
-_C.FACE.VAL_FILE = '../../dataset/WiderFace/wider_face_val.txt'
+_C.FACE.TRAIN_FILE = '../../dataset/DarkFace_finetune/train_annotations.txt'
+# _C.FACE.TRAIN_FILE = '../../dataset/WiderFace/wider_face_train.txt'
+_C.FACE.VAL_FILE = '../../dataset/DarkFace_finetune/test_annotations.txt'
+# _C.FACE.VAL_FILE = '../../dataset/WiderFace/wider_face_val.txt'
 # _C.FACE.TEST_FILE = '../../dataset/DarkFace/'
 
 _C.FACE.OVERLAP_THRESH = 0.35

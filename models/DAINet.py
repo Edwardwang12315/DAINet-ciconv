@@ -421,7 +421,7 @@ class DSFD(nn.Module):
 			mdata = torch.load(base_file,
 							   map_location=lambda storage, loc: storage)
 
-			epoch = 118 # lr=1.5e-06
+			epoch = 0 # lr=1.2e-06
 			self.load_state_dict(mdata)
 			print('Finished!')
 		else:

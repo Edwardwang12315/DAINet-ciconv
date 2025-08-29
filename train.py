@@ -39,16 +39,16 @@ parser.add_argument('--model',
                     choices=['ciconv','dark', 'vgg', 'resnet50', 'resnet101', 'resnet152'],
                     help='model for training')
 parser.add_argument('--resume',
-                    default=None, type=str, # '../../model/forDAINet/dark/dsfd_v2.3.pth'
+                    default='../../model/forDAINet/dark/dsfd_oriBEST.pth', type=str, # '../../model/forDAINet/dark/dsfd_v2.3.pth'
                     help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--num_workers',
-                    default=48, type=int, # server上为20 我的电脑上为4
+                    default=20, type=int, # server上为20 我的电脑上为4
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda',
                     default=True, type=bool,
                     help='Use CUDA to train model')
 parser.add_argument('--lr', '--learning-rate',
-                    default=5e-4, type=float,
+                    default=5e-7, type=float,
                     help='initial learning rate')
 parser.add_argument('--momentum',
                     default=0.9, type=float,
@@ -286,7 +286,7 @@ def train():
             if tloss < min_loss :
                 if local_rank == 0 :
                     print( 'Saving best state,epoch' , epoch )
-                    torch.save( dsfd_net.state_dict() , os.path.join(save_folder , 'dsfd.pth' ) )
+                    torch.save( dsfd_net.state_dict() , os.path.join(save_folder , 'dsfd_finetune.pth' ) )
                 min_loss = tloss
             
         if iteration >= cfg.MAX_STEPS:
@@ -331,7 +331,7 @@ def val(epoch, net, dsfd_net,  criterion):
         if local_rank == 0:
             print('Saving best state,epoch', epoch)
             torch.save(dsfd_net.state_dict(), os.path.join(
-                save_folder, 'dsfd.pth'))
+                save_folder, 'dsfd_finetune.pth'))
         min_loss = tloss
 
     states = {
