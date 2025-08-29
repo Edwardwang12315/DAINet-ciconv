@@ -325,7 +325,11 @@ def val(epoch, net, dsfd_net,  criterion):
         if local_rank == 0:
             print('Saving best state,epoch', epoch)
             torch.save(dsfd_net.state_dict(), os.path.join(
+<<<<<<< HEAD
                 save_folder, 'dsfd_finetune.pth'))
+=======
+                save_folder, 'dsfd_ori.pth'))
+>>>>>>> 010803f9dcb9d3216d7b3090714431ec8ea0973d
         min_loss = tloss
 
     states = {
