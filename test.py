@@ -22,6 +22,8 @@ import glob
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+from models.enhancer import RetinexNet
+
 use_cuda = torch.cuda.is_available()
 
 if use_cuda:
@@ -64,7 +66,8 @@ def detect_face(img, tmp_shrink):
     if use_cuda:
         x = x.cuda()
 
-    y = net.test_forward(x)[0]
+    x,_ = net_enh(x)
+    y = net.test_forward(x)
     detections = y.data.cpu().numpy()
 
     # # 转换为 0~255 的 uint8 类型
@@ -217,13 +220,18 @@ def bbox_vote(det_):
 def load_models():
     print('build network')
     net = build_net('test', num_classes=2, model='dark')
+    net.load_state_dict(torch.load('../../model/forDAINet/dark/dsfd-RetinexBEST.pth')) # Set the dir of your model weight
+    net_enh = RetinexNet()
+    net_enh.load_state_dict(torch.load('../../model/forDAINet/decomp.pth'))
+
+    net_enh.eval()
     net.eval()
-    net.load_state_dict(torch.load('../../model/forDAINet/dark/dsfd.pth')) # Set the dir of your model weight
 
     if use_cuda:
         net = net.cuda()
+        net_enh = net_enh.cuda()
 
-    return net
+    return net,net_enh
 
 def draw_boxes_with_matplotlib(image, dets,save_path):
     fig, ax = plt.subplots(1)
@@ -389,7 +397,7 @@ if __name__ == '__main__':
 
     ''' Main Test '''
 
-    net = load_models()
+    net,net_enh = load_models()
     img_list = load_images()
 
     if not os.path.exists(save_path):
@@ -434,15 +442,15 @@ if __name__ == '__main__':
         now += 1
         print('Processing: {}/{}'.format(now + 1, img_list.__len__()))
 
-    #     # 在代码中调用绘制函数
-    #     image = Image.open( img_path )
-    #     if image.mode == 'L' :
-    #         image = image.convert( 'RGB' )
-    #     image = np.array( image )
+        # 在代码中调用绘制函数
+        image = Image.open( img_path )
+        if image.mode == 'L' :
+            image = image.convert( 'RGB' )
+        image = np.array( image )
 
-    #     # 假设 dets 是检测到的框
-    #     img_save=os.path.join(save_path,"images",Path(os.path.basename(img_path)).stem + '.png')
-    #     draw_boxes_with_matplotlib( image , dets,img_save)
+        # 假设 dets 是检测到的框
+        img_save=os.path.join(save_path,"images",Path(os.path.basename(img_path)).stem + '.png')
+        draw_boxes_with_matplotlib( image , dets,img_save)
 
     # # 统计mAP
     # ground_truth_path = '../dataset/DarkFace/label'  # 修改为你的真实标签路径

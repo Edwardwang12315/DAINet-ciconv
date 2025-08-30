@@ -111,18 +111,18 @@ class DSFD(nn.Module):
 		self.loc_pal2 = nn.ModuleList(head2[0])
 		self.conf_pal2 = nn.ModuleList(head2[1])
 
-		# the reflectance decoding branch
-		# 反射图解码模块
-		self.ref = nn.Sequential(
-			nn.Conv2d(64, 64, kernel_size=3, padding=1),
-			nn.ReLU(inplace=True),
-			Interpolate(2),#上采样
-			nn.Conv2d(64, 3, kernel_size=3, padding=1),
-			nn.Sigmoid()
-		)
+		# # the reflectance decoding branch
+		# # 反射图解码模块
+		# self.ref = nn.Sequential(
+		# 	nn.Conv2d(64, 64, kernel_size=3, padding=1),
+		# 	nn.ReLU(inplace=True),
+		# 	Interpolate(2),#上采样
+		# 	nn.Conv2d(64, 3, kernel_size=3, padding=1),
+		# 	nn.Sigmoid()
+		# )
 
-		# 计算teacher模型和学生模型的KL散度
-		self.KL = DistillKL(T=4.0)
+		# # 计算teacher模型和学生模型的KL散度
+		# self.KL = DistillKL(T=4.0)
 
 		if self.phase == 'test':
 			self.softmax = nn.Softmax(dim=-1)
@@ -153,12 +153,6 @@ class DSFD(nn.Module):
 		
 		for k in range(16):
 			x = self.vgg[k](x)
-			if k == 4:
-				x_ = x
-		R = self.ref(x_[0:1])
-		
-		# print(f'x.shape = {x.shape}')
-		# exit()
 		
 		# print( '暗图' )
 		# image = np.transpose( R[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
@@ -283,10 +277,10 @@ class DSFD(nn.Module):
 				self.priors_pal2)
 		# print( f'out.shape = {output.shape}' )
 		# exit()
-		return output, R
+		return output
 
 	# during training, the model takes the paired images, and their pseudo GT illumination maps from the Retinex Decom Net
-	def forward(self, x, x_light, I, I_light):
+	def forward(self, x):
 		size = x.size()[2:]
 		pal1_sources = list()
 		pal2_sources = list()
@@ -295,23 +289,8 @@ class DSFD(nn.Module):
 		loc_pal2 = list()
 		conf_pal2 = list()
 
-		# 检测主线和Retinex主线分离
-		# apply vgg up to conv4_3 relu
-		# x输入暗图 xlight输入亮图
-		for k in range(5):
-			x_light = self.vgg[k](x_light)
-
 		for k in range(16):
 			x = self.vgg[k](x)
-			# x检测通路的输入
-			if k == 4:
-				x_dark = x
-				# xlight、xdark分解通路的输入
-
-		# extract the shallow features and forward them into the reflectance branch:
-		# R_dark、R_light是对应的反射图
-		R_dark = self.ref(x_dark)
-		R_light = self.ref(x_light)
 		
 		# print( '暗图' )
 		# image = np.transpose( R_dark[ 0 ].detach().cpu().numpy() , (1 , 2 , 0) )  # 调整维度顺序 [C, H, W] → [H, W, C]
@@ -330,30 +309,6 @@ class DSFD(nn.Module):
 		# plt.savefig( f'train_亮图.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
 		# exit()
 		
-		# Interchange
-		# I是Retinex Net生成的低光照下的光照图
-		x_dark_2 = (I * R_light).detach()
-		x_light_2 = (I_light * R_dark).detach()
-
-		for k in range(5):
-			x_light_2 = self.vgg[k](x_light_2)
-		for k in range(5):
-			x_dark_2 = self.vgg[k](x_dark_2)
-
-		# Redecomposition
-		# 重新分解
-		R_dark_2 = self.ref(x_light_2)
-		R_light_2 = self.ref(x_dark_2)
-
-		# mutual feature alignment loss
-		x_light = x_light.flatten(start_dim=2).mean(dim=-1)
-		x_dark = x_dark.flatten(start_dim=2).mean(dim=-1)
-		x_light_2 = x_light_2.flatten(start_dim=2).mean(dim=-1)
-		x_dark_2 = x_dark_2.flatten(start_dim=2).mean(dim=-1)
-		# 经过网络提取特征后的KL散度损失
-		loss_mutual = cfg.WEIGHT.MC * (self.KL(x_light, x_dark) + self.KL(x_dark, x_light) + \
-							 self.KL(x_light_2, x_dark_2) + self.KL(x_dark_2, x_light_2))
-
 		# the following is the rest of the original detection pipeline
 		of1 = x
 		s = self.L2Normof1(of1)
@@ -470,7 +425,7 @@ class DSFD(nn.Module):
 		# print(f'pred.shape={output[0].shape}')
 		# exit()
 		# packing the outputs from the reflectance decoder:
-		return output, [R_dark, R_light, R_dark_2, R_light_2], loss_mutual
+		return output
 
 	def load_weights(self, base_file):
 		other, ext = os.path.splitext(base_file)

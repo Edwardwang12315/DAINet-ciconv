@@ -29,23 +29,23 @@ parser = argparse.ArgumentParser(
     description='DSFD face Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
 parser.add_argument('--batch_size',
-                    default=3, type=int, # server 上为3
+                    default=8, type=int, # server 上为3
                     help='Batch size for training')
 parser.add_argument('--model',
                     default='dark', type=str,
                     choices=['dark', 'vgg', 'resnet50', 'resnet101', 'resnet152'],
                     help='model for training')
 parser.add_argument('--resume',
-                    default=None, type=str,
+                    default='../../model/forDAINet/dark/dsfd_oriBEST.pth', type=str,
                     help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--num_workers',
-                    default=32, type=int,
+                    default=20, type=int,
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda',
                     default=True, type=bool,
                     help='Use CUDA to train model')
 parser.add_argument('--lr', '--learning-rate',
-                    default=5e-4, type=float,
+                    default=5e-7, type=float,
                     help='initial learning rate')
 parser.add_argument('--momentum',
                     default=0.9, type=float,
@@ -154,7 +154,7 @@ def train():
         net.conf_pal1.apply(net.weights_init)
         net.loc_pal2.apply(net.weights_init)
         net.conf_pal2.apply(net.weights_init)
-        net.ref.apply(net.weights_init)
+        # net.ref.apply(net.weights_init)
 
     # Scaling the lr
     # 设置了根据批次大小和gpu数量调整学习率的机制
@@ -169,7 +169,7 @@ def train():
     param_group += [{'params': dsfd_net.conf_pal1.parameters(), 'lr': lr}]
     param_group += [{'params': dsfd_net.loc_pal2.parameters(), 'lr': lr}]
     param_group += [{'params': dsfd_net.conf_pal2.parameters(), 'lr': lr}]
-    param_group += [{'params': dsfd_net.ref.parameters(), 'lr': lr / 10.}]
+    # param_group += [{'params': dsfd_net.ref.parameters(), 'lr': lr / 10.}]
 
     optimizer = optim.SGD(param_group, lr=lr, momentum=args.momentum,
                           weight_decay=args.weight_decay)
@@ -183,7 +183,7 @@ def train():
         cudnn.benckmark = True
 
     criterion = MultiBoxLoss(cfg, args.cuda)
-    criterion_enhance = EnhanceLoss()
+    # criterion_enhance = EnhanceLoss()
     if local_rank == 0:
         print('Loading wider dataset...')
         print('Using the specified args:')
@@ -216,25 +216,20 @@ def train():
             images = Variable(images.cuda() / 255.)
             targetss = [Variable(ann.cuda(), requires_grad=False)
                         for ann in targets]
-            img_dark = torch.empty(size=(images.shape[0], images.shape[1], images.shape[2], images.shape[3])).cuda()
+            # img_dark = torch.empty(size=(images.shape[0], images.shape[1], images.shape[2], images.shape[3])).cuda()
             # Generation of degraded data and AET groundtruth
-            for i in range(images.shape[0]):
-                img_dark[i], _ = Low_Illumination_Degrading(images[i])#ISP方法生成低照度图像
+            # for i in range(images.shape[0]):
+            #     img_dark[i], _ = Low_Illumination_Degrading(images[i])#ISP方法生成低照度图像
 
             if iteration in cfg.LR_STEPS:
                 step_index += 1
                 adjust_learning_rate(optimizer, args.gamma, step_index)
 
-            # 前向传播两个分支
+            # 先增强再检测
             t0 = time.time()
-            R_dark_gt, I_dark = net_enh(img_dark)
-            R_light_gt, I_light = net_enh(images)
+            images,_ = net_enh(images)
 
-            out, out2, loss_mutual = net(img_dark, images, I_dark.detach(), I_light.detach())
-            R_dark, R_light, R_dark_2, R_light_2 = out2
-            # print( "After net:" )
-            # print( f"Allocated: {torch.cuda.memory_allocated() / 1024 ** 2:.2f} MB" )
-            # print( f"Cached:    {torch.cuda.memory_reserved() / 1024 ** 2:.2f} MB" )
+            out = net(images)
 
             # backprop
             optimizer.zero_grad()
@@ -242,11 +237,7 @@ def train():
             loss_l_pa1l, loss_c_pal1 = criterion(out[:3], targetss)
             loss_l_pa12, loss_c_pal2 = criterion(out[3:], targetss)
 
-            loss_enhance = criterion_enhance([R_dark, R_light, R_dark_2, R_light_2, I_dark.detach(), I_light.detach()], images, img_dark) * 0.1
-            loss_enhance2 = F.l1_loss(R_dark, R_dark_gt.detach()) + F.l1_loss(R_light, R_light_gt.detach()) + (
-                        1. - ssim(R_dark, R_dark_gt.detach())) + (1. - ssim(R_light, R_light_gt.detach()))
-
-            loss = loss_l_pa1l + loss_c_pal1 + loss_l_pa12 + loss_c_pal2 + loss_enhance2 + loss_enhance + loss_mutual
+            loss = loss_l_pa1l + loss_c_pal1 + loss_l_pa12 + loss_c_pal2
             # 反向传播
             loss.backward()
             torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=35, norm_type=2)
@@ -257,8 +248,6 @@ def train():
             loss_c1 += loss_c_pal1.item()
             loss_l2 += loss_l_pa12.item()
             loss_c2 += loss_c_pal2.item()
-            loss_mu += loss_mutual.item()
-            loss_en += loss_enhance.item()
 
             if iteration % 100 == 0:
                 tloss = losses / (batch_idx + 1)
@@ -266,16 +255,14 @@ def train():
                 tloss_c1 = loss_c1 / (batch_idx + 1)
                 tloss_l2 = loss_l2 / (batch_idx + 1)
                 tloss_c2 = loss_c2 / (batch_idx + 1)
-                tloss_mu = loss_mu / (batch_idx + 1)
-                tloss_en = loss_en / (batch_idx + 1)
                 
                 if local_rank == 0:
                     print( 'Timer: %.4f' % (t1 - t0) )
                     print( 'epoch:' + repr( epoch ) + ' || iter:' + repr( iteration ) + ' || Loss:%.4f' % (tloss) )
                     print( '->> pal1 conf loss:{:.4f} || pal1 loc loss:{:.4f}'.format( tloss_c1 , tloss_l1 ) )
                     print( '->> pal2 conf loss:{:.4f} || pal2 loc loss:{:.4f}'.format( tloss_c2 , tloss_l2 ) )
-                    print( '->> mutual loss:{:.4f} || enhanced loss:{:.4f}'.format( tloss_mu , tloss_en ) )
                     print( '->>lr:{}'.format( optimizer.param_groups[ 0 ][ 'lr' ] ) )
+                    # val(epoch, net, dsfd_net, net_enh, criterion)
         
             if iteration != 0 and iteration % 5000 == 0:
                 if local_rank == 0:
@@ -286,29 +273,33 @@ def train():
             iteration += 1
         # if local_rank == 0:
         if (epoch + 1) >= 0:
-            val(epoch, net, dsfd_net, net_enh, criterion)
+            with torch.no_grad() :
+                val(epoch, net, dsfd_net, net_enh, criterion)
         if iteration >= cfg.MAX_STEPS:
             break
 
 
 def val(epoch, net, dsfd_net, net_enh, criterion):
+    net_enh.eval()
     net.eval()
     step = 0
     losses = torch.tensor(0.).cuda()
-    losses_enh = torch.tensor(0.).cuda()
+    # losses_enh = torch.tensor(0.).cuda()
     t1 = time.time()
 
     for batch_idx, (images, targets, img_paths) in enumerate(val_loader):
         if args.cuda:
             images = Variable(images.cuda() / 255.)
-            targets = [Variable(ann.cuda(), volatile=True)
-                       for ann in targets]
+            with torch.no_grad():
+                targets = [ann.cuda() for ann in targets]
         else:
             images = Variable(images / 255.)
-            targets = [Variable(ann, volatile=True) for ann in targets]
-        img_dark = torch.stack([Low_Illumination_Degrading(images[i])[0] for i in range(images.shape[0])],
-                               dim=0)
-        out, R = net.module.test_forward(img_dark)
+            with torch.no_grad() :
+                targets = [ann for ann in targets]
+        
+        with torch.no_grad() :
+            out,_ = net_enh(images)
+            out = net.module.test_forward(out)
 
         loss_l_pa1l, loss_c_pal1 = criterion(out[:3], targets)
         loss_l_pa12, loss_c_pal2 = criterion(out[3:], targets)
@@ -329,7 +320,7 @@ def val(epoch, net, dsfd_net, net_enh, criterion):
         if local_rank == 0:
             print('Saving best state,epoch', epoch)
             torch.save(dsfd_net.state_dict(), os.path.join(
-                save_folder, 'dsfd.pth'))
+                save_folder, 'dsfd-Retinex.pth'))
         min_loss = tloss
 
     states = {
