@@ -1,3 +1,42 @@
+DSFD基于预训练用DarkFace调优做60个epoch
+# 8.26
+- 基于预训练在DarkFace上调优60个epoch
+  - 8.28完成 记录权重文件为 dsfd_finetuneBEST.pth
+  - 8.29完成测试 result 评估 62.00
+
+
+```python
+CUDA_VISIBLE_DEVICES=0 python -m torch.distributed.launch --nproc_per_node=1 train.py
+```
+
+```python
+# 单通道边缘图显示方法
+image = inv_out[ 0 ].detach().cpu().numpy().squeeze()  # 维度 [H, W]
+
+# 归一化到对称范围
+vmax = np.max( np.abs( image ) )
+image_normalized = image / vmax  # 范围[-1, 1]
+
+# 使用红蓝颜色映射可视化
+plt.imshow( image_normalized , cmap = 'RdBu' , vmin = -1 , vmax = 1 )
+plt.axis( 'off' )
+plt.colorbar( label = 'Edge Strength (Red: Positive, Blue: Negative)' )
+plt.show()
+# 保存图像到文件
+plt.savefig( f'ciconv.png' , bbox_inches = 'tight' , pad_inches = 0 , dpi = 800 )
+```
+
+```python
+# 查询cpu核心数，用来调整worker数——一般为核心数的0.5-0.75
+print(f'cpus num = {os.cpu_count()}')
+```
+
+```bash
+tmux窗口下，ctrl + b 再加 [ 可以启动复制模式,鼠标任意滚动
+或者 输入指令 tmux set -g mouse on
+```
+
+
 <p align="center">
   <h1 align="center">Boosting Object Detection with Zero-Shot Day-Night Domain Adaptation
 </h1>
